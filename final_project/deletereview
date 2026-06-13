@@ -1,3 +1,4 @@
-curl -X DELETE http://localhost:5000/customer/auth/review/1
+curl -X DELETE http://localhost:5000/customer/auth/review/1 \
+-b cookies.txt
 
 Review for ISBN 1 deleted
