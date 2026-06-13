@@ -27,34 +27,28 @@ const authenticatedUser = (username,password)=>{ //returns boolean
 regd_users.post("/login", (req,res) => {
   //Write your code here
   const username = req.body.username;
-  const password = req.body.password;
+    const password = req.body.password;
 
-  if (!username || !password) {
-      return res.status(404).json({
-          message: "Error logging in"
-      });
-  }
+    if (authenticatedUser(username, password)) {
 
-  if (authenticatedUser(username, password)) {
+        let accessToken = jwt.sign(
+            { username: username },
+            "access",
+            { expiresIn: 3600 }
+        );
 
-      let accessToken = jwt.sign(
-          {
-              username: username
-          },
-          "access",
-          { expiresIn: 60 * 60 }
-      );
+        req.session.authorization = {
+            accessToken
+        };
 
-      req.session.authorization = {
-          accessToken
-      };
+        return res.status(200).json({
+            message: "Login successful!"
+        });
+    }
 
-      return res.status(200).send("User successfully logged in");
-  }
-
-  return res.status(208).json({
-      message: "Invalid Login. Check username and password"
-  });
+    return res.status(401).json({
+        message: "Invalid Login. Check username and password"
+    });
 });
 
 // Add a book review
