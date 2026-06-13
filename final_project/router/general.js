@@ -46,9 +46,17 @@ public_users.get('/isbn/:isbn',async function (req, res) {
   //Write your code here
   const isbn = req.params.isbn;
 
-  return new Promise((resolve) => {
-      resolve(res.status(200).json(books[isbn]));
-  });
+  try {
+    const response = await axios.get('http://localhost:5000/books');
+
+    const allBooks = response.data;
+
+    return res.status(200).json(allBooks[isbn]);
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error retrieving book"
+    });
+  }
   
  });
   
@@ -57,20 +65,26 @@ public_users.get('/author/:author',async function (req, res) {
   //Write your code here
   const author = req.params.author;
 
-  return new Promise((resolve) => {
+  try {
+    const response = await axios.get('http://localhost:5000/');
+    
+    const books = response.data;
 
-      let result = {};
-      let keys = Object.keys(books);
+    let filteredBooks = {};
 
-      keys.forEach((key) => {
-          if (books[key].author === author) {
-              result[key] = books[key];
-          }
-      });
+    Object.keys(books).forEach(key => {
+      if (books[key].author === author) {
+        filteredBooks[key] = books[key];
+      }
+    });
 
-      resolve(res.status(200).json(result));
-  });
+    return res.status(200).json(filteredBooks);
 
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error retrieving books"
+    });
+  }
 });
 
 // Get all books based on title
@@ -78,33 +92,42 @@ public_users.get('/title/:title',async function (req, res) {
   //Write your code here
   const title = req.params.title;
 
-    return new Promise((resolve) => {
+  try {
+    const response = await axios.get('http://localhost:5000/books');
 
-        let result = {};
-        let keys = Object.keys(books);
+    const allBooks = response.data;
+    let filteredBooks = {};
 
-        keys.forEach((key) => {
-            if (books[key].title === title) {
-                result[key] = books[key];
-            }
-        });
-
-        resolve(res.status(200).json(result));
+    Object.keys(allBooks).forEach(key => {
+      if (allBooks[key].title === title) {
+        filteredBooks[key] = allBooks[key];
+      }
     });
+
+    return res.status(200).json(filteredBooks);
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error retrieving books"
+    });
+  }
 });
 
 //  Get book review
-public_users.get('/review/:isbn',function (req, res) {
+public_users.get('/review/:isbn',async function (req, res) {
   //Write your code here
-  let isbn = req.params.isbn
-  let book = books[isbn]
+  const isbn = req.params.isbn;
 
-  if(book){
-    return res.status(200).json(book.reviews)
-  }else {
-    return res.status(404).json({message: "Book not found"});
+  try {
+    const response = await axios.get('http://localhost:5000/books');
+
+    const allBooks = response.data;
+
+    return res.status(200).json(allBooks[isbn]);
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error retrieving book"
+    });
   }
-
 });
 
 module.exports.general = public_users;
