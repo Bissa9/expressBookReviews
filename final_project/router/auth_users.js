@@ -1,90 +1,105 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
+const axios = require('axios');
 let books = require("./booksdb.js");
-const regd_users = express.Router();
+let isValid = require("./auth_users.js").isValid;
+let users = require("./auth_users.js").users;
+const public_users = express.Router();
 
-let users = [];
-
-const isValid = (username)=>{ //returns boolean
-//write code to check is the username is valid
-    let usersWithSameName = users.filter(
-        (user) => user.username === username
-    );
-
-    return usersWithSameName.length === 0;
-}
-
-const authenticatedUser = (username,password)=>{ //returns boolean
-//write code to check if username and password match the one we have in records.
-    let validUsers = users.filter(
-        (user) => user.username === username && user.password === password
-    );
-
-    return validUsers.length > 0;
-}
-
-//only registered users can login
-regd_users.post("/login", (req,res) => {
-  //Write your code here
-  const username = req.body.username;
+public_users.post("/register", (req,res) => {
+    const username = req.body.username;
     const password = req.body.password;
 
-    if (authenticatedUser(username, password)) {
-
-        let accessToken = jwt.sign(
-            { username: username },
-            "access",
-            { expiresIn: 3600 }
-        );
-
-        req.session.authorization = {
-            accessToken
-        };
-
-        return res.status(200).json({
-            message: "Login successful!"
+    if (!username || !password) {
+        return res.status(404).json({
+            message: "Unable to register user."
         });
     }
 
-    return res.status(401).json({
-        message: "Invalid Login. Check username and password"
+    if (!isValid(username)) {
+        return res.status(404).json({
+            message: "User already exists!"
+        });
+    }
+
+    users.push({
+        username: username,
+        password: password
+    });
+
+    return res.status(200).json({
+        message: "User successfully registered. Now you can login"
     });
 });
 
-// Add a book review
-regd_users.put("/auth/review/:isbn", (req, res) => {
-  //Write your code here
-  const isbn = req.params.isbn;
-  const review = req.body.review;
-  const username = req.session.authorization.username;
-
-  if (!books[isbn]) {
-      return res.status(404).json({ message: "Book not found" });
-  }
-
-  books[isbn].reviews[username] = review;
-
-  return res.status(200).json({
-      message: "Review successfully added/updated",
-      reviews: books[isbn].reviews
-  });
-});
-
-regd_users.delete("/auth/review/:isbn", (req, res) => {
-
-    const isbn = req.params.isbn;
-    const username = req.session.authorization.username;
-
-    if (books[isbn] && books[isbn].reviews[username]) {
-
-        delete books[isbn].reviews[username];
-
-        return res.status(200).send(`Review for ISBN ${isbn} deleted`);
+// Get the book list available in the shop
+public_users.get('/', async function (req, res) {
+    try {
+        return res.status(200).json(books);
+    } catch (error) {
+        return res.status(500).json({ message: "Error retrieving books" });
     }
-
-    return res.status(404).send("No review found");
 });
 
-module.exports.authenticated = regd_users;
-module.exports.isValid = isValid;
-module.exports.users = users;
+// Get book details based on ISBN
+public_users.get('/isbn/:isbn', async function (req, res) {
+    const isbn = req.params.isbn;
+
+    try {
+        const response = await axios.get('http://localhost:5000/');
+        return res.status(200).json(response.data[isbn]);
+    } catch (error) {
+        return res.status(500).json({ message: "Error retrieving book" });
+    }
+});
+
+// Get book details based on author
+public_users.get('/author/:author', async function (req, res) {
+    const author = req.params.author;
+
+    try {
+        const response = await axios.get('http://localhost:5000/');
+        const allBooks = response.data;
+
+        let filteredBooks = {};
+
+        Object.keys(allBooks).forEach(key => {
+            if (allBooks[key].author === author) {
+                filteredBooks[key] = allBooks[key];
+            }
+        });
+
+        return res.status(200).json(filteredBooks);
+    } catch (error) {
+        return res.status(500).json({ message: "Error retrieving books" });
+    }
+});
+
+// Get all books based on title
+public_users.get('/title/:title', async function (req, res) {
+    const title = req.params.title;
+
+    try {
+        const response = await axios.get('http://localhost:5000/');
+        const allBooks = response.data;
+
+        let filteredBooks = {};
+
+        Object.keys(allBooks).forEach(key => {
+            if (allBooks[key].title === title) {
+                filteredBooks[key] = allBooks[key];
+            }
+        });
+
+        return res.status(200).json(filteredBooks);
+    } catch (error) {
+        return res.status(500).json({ message: "Error retrieving books" });
+    }
+});
+
+// Get book review
+public_users.get('/review/:isbn', function (req, res) {
+    const isbn = req.params.isbn;
+    return res.status(200).json(books[isbn].reviews);
+});
+
+module.exports.general = public_users;
